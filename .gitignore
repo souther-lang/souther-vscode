@@ -1,0 +1,8 @@
+# Fetched from a Souther release by `npm run fetch`, not committed here.
+server/
+syntaxes/
+
+node_modules/
+*.vsix
+
+.DS_Store

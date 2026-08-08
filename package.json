@@ -1,19 +1,19 @@
 {
   "name": "souther",
   "displayName": "Souther",
-  "description": "Souther language support: syntax highlighting and the language server.",
+  "description": "Souther language support: the language server, syntax highlighting, and a Java runtime it fetches for you.",
   "version": "0.1.0",
-  "publisher": "wolfchief",
+  "publisher": "souther",
   "license": "EPL-2.0",
+  "southerVersion": "0.1.0-rc4",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kawasima/souther.git",
-    "directory": "editors/vscode"
+    "url": "https://github.com/souther-lang/souther-vscode.git"
   },
   "bugs": {
-    "url": "https://github.com/kawasima/souther/issues"
+    "url": "https://github.com/souther-lang/souther-vscode/issues"
   },
-  "homepage": "https://github.com/kawasima/souther#readme",
+  "homepage": "https://github.com/souther-lang/souther-vscode#readme",
   "keywords": [
     "souther",
     "language server",
@@ -27,13 +27,16 @@
     "Programming Languages"
   ],
   "icon": "icon.png",
-  "main": "./extension.js",
+  "main": "./src/extension.js",
   "scripts": {
-    "vscode:prepublish": "node -e \"require('fs').accessSync('server/souther-lsp.jar')\"",
-    "package": "vsce package"
+    "fetch": "node scripts/fetch-artifacts.mjs",
+    "test": "node --test",
+    "package": "vsce package",
+    "vscode:prepublish": "node -e \"['server/souther-lsp.jar','syntaxes/souther.tmLanguage.json'].forEach(f => require('fs').accessSync(f))\""
   },
   "activationEvents": [
-    "onLanguage:souther"
+    "onLanguage:souther",
+    "workspaceContains:**/*.sou"
   ],
   "contributes": {
     "languages": [
@@ -55,6 +58,18 @@
         "path": "./syntaxes/souther.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "souther.restartServer",
+        "title": "Restart Language Server",
+        "category": "Souther"
+      },
+      {
+        "command": "souther.showOutput",
+        "title": "Show Output",
+        "category": "Souther"
+      }
+    ],
     "configuration": {
       "title": "Souther",
       "properties": {
@@ -65,8 +80,8 @@
         },
         "souther.server.java": {
           "type": "string",
-          "default": "java",
-          "description": "The java executable used to launch the language server."
+          "default": "",
+          "description": "The java executable used to launch the language server. Leave empty to use a Java 25 from JAVA_HOME or the PATH, or one the extension downloads."
         }
       }
     }
@@ -75,6 +90,7 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@vscode/vsce": "^3.2.1"
+    "@vscode/vsce": "^3.2.1",
+    "ovsx": "^0.10.1"
   }
 }

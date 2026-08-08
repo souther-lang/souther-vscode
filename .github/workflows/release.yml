@@ -1,0 +1,54 @@
+name: Release
+
+# Packages the extension on a `v*` tag: fetches the language server jar and the grammar from the
+# Souther release named by `southerVersion` in package.json, builds the VSIX, attaches it to the
+# GitHub Release, and publishes it to Open VSX.
+#
+# The Visual Studio Marketplace is published by hand — see README.md.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Fetch the server jar and the grammar
+        run: npm run fetch
+
+      - name: Package the VSIX
+        run: npx @vscode/vsce package
+
+      - name: Upload the VSIX as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: souther-vscode
+          path: '*.vsix'
+
+      - name: Attach the VSIX to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.vsix'
+
+      - name: Publish to Open VSX
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npx ovsx publish --packagePath *.vsix --pat "$OVSX_PAT"
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

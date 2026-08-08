@@ -1,81 +1,81 @@
 # Souther for VS Code
 
-Syntax highlighting for the Souther language (`.sou`).
+Language support for [Souther](https://github.com/souther-lang/souther) (`.sou`): the language server,
+syntax highlighting, and the Java runtime the server needs.
 
-The TextMate grammar in `syntaxes/souther.tmLanguage.json` is generated from the compiler's
-lexer, so it stays in step with the language. Regenerate it with:
+Install the extension and open a `.sou` file. Nothing else is required — if the machine has no Java
+25, the extension offers to download one and uses it only for Souther. The status bar shows the
+server starting and turns into a check when it is ready; clicking it opens the log.
 
-```sh
-mvn -q -pl souther-compiler exec:java \
-  -Dexec.mainClass=souther.compiler.highlight.TmLanguageGenerator \
-  -Dexec.args="editors/vscode/syntaxes/souther.tmLanguage.json"
-```
+## What you get
 
-A test (`TmLanguageGeneratorTest`) fails if the committed grammar drifts from the generator, so a
-keyword added to the lexer forces the grammar — and this file — to be regenerated.
+Diagnostics, the document outline, hover, go-to-definition, find-references, rename, name
+completion, quick-fix code actions, formatting, and semantic tokens. The tokens read the concrete
+syntax tree, so a type name and a value are coloured differently even though Souther identifiers are
+not capitalised.
 
-## Language server
+The TextMate grammar is generated from the compiler's lexer, so highlighting keeps up with the
+language on its own.
 
-The Souther language server is a self-contained jar that speaks LSP over stdio. Build it with:
+## Settings
 
-```sh
-mvn -q -pl souther-lsp -am package
-# → souther-lsp/target/souther-lsp.jar
-```
+| Setting | What it does |
+| --- | --- |
+| `souther.server.java` | The `java` to launch the server with. Leave empty to use a Java 25 from `JAVA_HOME` or the `PATH`, or one the extension downloaded. When this points at something too old, the extension says so instead of quietly using another runtime. |
+| `souther.server.jar` | A different `souther-lsp.jar` — for running a build of the server you made yourself. Defaults to the bundled one. |
 
-It provides diagnostics (all syntax errors plus the first semantic error), the document outline,
-hover, go-to-definition, find-references, rename, name completion, quick-fix code actions (a
-did-you-mean spelling fix), formatting, and semantic tokens — the last read the CST, so a type name
-and a value are coloured differently even though Souther identifiers are not capitalised.
+Two commands: `Souther: Restart Language Server` and `Souther: Show Output`.
 
-Formatting is also available on the command line: `souther fmt <file.sou>` prints the canonical
-form, `souther fmt -w <file.sou>` rewrites in place, and `souther fmt --check <file.sou>` exits
-non-zero if a file is not already formatted (for CI).
+### Where the downloaded runtime goes
 
-## Running the client in VS Code
+Into the extension's global storage, as `jre-25`. It is a Temurin build from
+[Adoptium](https://adoptium.net/), verified against the checksum the API reports, and nothing else
+on the machine sees it. Deleting the directory makes the extension offer the download again.
 
-`extension.js` launches the jar over stdio via `vscode-languageclient`. To try it from source:
+If the download cannot go through — a proxy, say — the output channel prints the URL and how to
+point `souther.server.java` at a runtime you install yourself.
 
-```sh
-mvn -q -pl souther-lsp -am package                 # build the server jar
-mkdir -p editors/vscode/server
-cp souther-lsp/target/souther-lsp.jar editors/vscode/server/
-cd editors/vscode && npm install                   # fetch vscode-languageclient
-```
+## Building it
 
-Then open `editors/vscode` in VS Code and press F5 (Extension Development Host), or package it with
-`vsce package`. Point `souther.server.jar` at another jar, or `souther.server.java` at a specific
-`java`, through the settings if the defaults do not fit.
-
-## Packaging and publishing
-
-The bundled `server/souther-lsp.jar` is a build output, not tracked in git. Build and stage it
-before packaging:
+The language server jar and the TextMate grammar are build outputs of the
+[compiler repository](https://github.com/souther-lang/souther), so they are not committed here. Fetch
+them from the release named by `southerVersion` in `package.json`:
 
 ```sh
-mvn -q -pl souther-lsp -am package
-mkdir -p editors/vscode/server
-cp souther-lsp/target/souther-lsp.jar editors/vscode/server/
-cd editors/vscode
-npm ci
-npm run package                                    # → souther-<version>.vsix
+npm install
+npm run fetch      # → server/souther-lsp.jar, syntaxes/souther.tmLanguage.json
+npm test
 ```
 
-`npm run package` runs `@vscode/vsce` (a dev dependency). `vscode:prepublish` refuses to package
-if `server/souther-lsp.jar` is missing, so the VSIX never ships without the server.
+Then open this folder in VS Code and press F5 for an Extension Development Host, or
+`npx @vscode/vsce package` for a VSIX.
 
-The `.github/workflows/release-vscode.yml` workflow automates this. Push a `vscode-v*` tag to build
-the jar, package the VSIX, and attach it to the matching GitHub Release:
+While changing the language and the extension together, build the server from a checkout and copy
+from it instead of downloading:
 
 ```sh
-git tag vscode-v0.1.0
-git push origin vscode-v0.1.0
+cd ../souther && mvn -pl souther-lsp -am package
+cd ../souther-vscode && SOUTHER_LOCAL=../souther npm run fetch
 ```
 
-`workflow_dispatch` runs the same build and uploads the VSIX as a workflow artifact without cutting
-a release.
+### Layout
 
-Publishing to a marketplace is manual. Download the `.vsix` from the GitHub Release (or build it
-locally with `npm run package`), then upload it under the `wolfchief` publisher at
-<https://marketplace.visualstudio.com/manage>. A manual upload needs neither a Personal Access Token
-nor an Azure subscription — both are only required for the `vsce publish` CLI.
+- `src/extension.js` — activation, the client, and the wiring
+- `src/java.js` — which `java` runs the server. No VS Code API, so the resolution order is testable
+- `src/download.js` — the Adoptium query, the download, and unpacking
+- `src/status.js` — the status bar item and the output channel
+- `scripts/fetch-artifacts.mjs` — puts the jar and the grammar in place
+
+## Releasing
+
+Push a `v*` tag. The workflow fetches the artifacts, packages the VSIX, attaches it to the GitHub
+Release, and publishes to Open VSX (with the `OVSX_PAT` secret).
+
+Publishing to the Visual Studio Marketplace is manual: download the `.vsix` from the release and
+upload it under the publisher at <https://marketplace.visualstudio.com/manage>. A manual upload
+needs neither a Personal Access Token nor an Azure subscription — both are only required for the
+`vsce publish` CLI.
+
+## License
+
+EPL-2.0, the same as the language. See [LICENSE](LICENSE).
