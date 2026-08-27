@@ -17,10 +17,21 @@ not capitalised.
 The TextMate grammar is generated from the compiler's lexer, so highlighting keeps up with the
 language on its own.
 
+### What the rows cover
+
+Turn `souther.adequacy` on and each behavior carries a line saying how much of it the `example` rows
+pin down — the same figures `souther examples` reports, where the behavior is being written rather
+than in a terminal window. On a behavior the rows fall short of, a code action writes the ones
+nothing covers: the block `souther examples --generate --boundaries` prints, put at the end of the
+file, commented out, with each answer left as a hole for you to fill in.
+
+It is off by default because of what it costs: the rows are run to find out where they go.
+
 ## Settings
 
 | Setting | What it does |
 | --- | --- |
+| `souther.adequacy` | How much of what the `example` rows cover to measure: `off` (the default), `witness`, or `all`. Off, nothing is measured and neither the lens nor the offer below appears. `witness` reads what the compile already ran; `all` generates a second set of classes and runs every row again, on every change. The server reads this when it starts, so changing it restarts the server. |
 | `souther.server.java` | The `java` to launch the server with. Leave empty to use a Java 25 from `JAVA_HOME` or the `PATH`, or one the extension downloaded. When this points at something too old, the extension says so instead of quietly using another runtime. |
 | `souther.server.jar` | A different `souther-lsp.jar` — for running a build of the server you made yourself. Defaults to the bundled one. |
 

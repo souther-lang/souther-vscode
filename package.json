@@ -73,6 +73,21 @@
     "configuration": {
       "title": "Souther",
       "properties": {
+        "souther.adequacy": {
+          "type": "string",
+          "enum": [
+            "off",
+            "witness",
+            "all"
+          ],
+          "enumDescriptions": [
+            "Nothing is measured, and neither the lens nor the offer appears.",
+            "Read off what the compile already ran.",
+            "Generate a second set of classes and run every row again, on every change."
+          ],
+          "default": "off",
+          "description": "How much of what the `example` rows cover to measure. Measuring puts each behavior's coverage on a line above it, and offers a code action writing the rows nothing covers. Changing this restarts the language server, which reads the level when it starts."
+        },
         "souther.server.jar": {
           "type": "string",
           "default": "",
