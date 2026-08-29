@@ -9,6 +9,7 @@ const path = require('path');
 const { ProgressLocation, commands, window, workspace } = require('vscode');
 const { LanguageClient, TransportKind } = require('vscode-languageclient/node');
 
+const { initializationOptions } = require('./adequacy');
 const { REQUIRED_MAJOR, resolveJava } = require('./java');
 const { downloadJre, javaExecutable, managedJava, platformSelectors } = require('./download');
 const { Status } = require('./status');
@@ -22,6 +23,13 @@ async function activate(context) {
     status,
     commands.registerCommand('souther.showOutput', () => status.show()),
     commands.registerCommand('souther.restartServer', () => restart(context)),
+    // The measurement level is part of the handshake, so a running server cannot be told about a
+    // new one. Restarting is what makes the setting take effect.
+    workspace.onDidChangeConfiguration((change) => {
+      if (change.affectsConfiguration('souther.adequacy')) {
+        restart(context);
+      }
+    }),
   );
   await start(context);
 }
@@ -44,6 +52,8 @@ async function start(context) {
   client = new LanguageClient('souther', 'Souther Language Server', { run, debug: run }, {
     documentSelector: [{ scheme: 'file', language: 'souther' }],
     synchronize: { fileEvents: workspace.createFileSystemWatcher('**/*.sou') },
+    initializationOptions: initializationOptions(
+      workspace.getConfiguration('souther').get('adequacy')),
     outputChannel: status.channel,
   });
 
