@@ -2,10 +2,10 @@
   "name": "souther",
   "displayName": "Souther",
   "description": "Souther language support: the language server, syntax highlighting, and a Java runtime it fetches for you.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "souther",
   "license": "EPL-2.0",
-  "southerVersion": "0.2.0",
+  "southerVersion": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/souther-lang/souther-vscode.git"
